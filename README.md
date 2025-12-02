@@ -4,52 +4,6 @@ Specification for sending Morse Code over MIDI events.
 
 This document builds on existing MIDI protocols used by several hardware and software manufacturers for triggering keying events between hardware keys, and software keyers, transmitters, practice oscillators, etc.  The goal is to use MIDI to trigger key-down and key-up events between morse keys, and software running on a computer (eg: an SDR transmitter, remote station, practice keyer, etc.)
 
-<div class="classictemplate template" style="display: block;">
-	<style type="text/css">
-		#groupsio_embed_signup input {border:1px solid #999; -webkit-appearance:none;}
-		#groupsio_embed_signup label {display:block; font-size:16px; padding-bottom:10px; font-weight:bold;}
-		#groupsio_embed_signup .email {display:block; padding:8px 0; margin:0 4% 10px 0; text-indent:5px; width:58%; min-width:130px;}
-		#groupsio_embed_signup {
-		background:#fff; clear:left; font:14px Helvetica,Arial,sans-serif;
-		}
-		#groupsio_embed_signup .button {
-
-		width:25%; margin:0 0 10px 0; min-width:90px;
-		background-image: linear-gradient(to bottom,#337ab7 0,#265a88 100%);
-		background-repeat: repeat-x;
-		border-color: #245580;
-		text-shadow: 0 -1px 0 rgba(0,0,0,.2);
-		box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
-		padding: 5px 10px;
-		font-size: 12px;
-		line-height: 1.5;
-		border-radius: 3px;
-		color: #fff;
-		background-color: #337ab7;
-		display: inline-block;
-		margin-bottom: 0;
-		font-weight: 400;
-		text-align: center;
-		white-space: nowrap;
-		vertical-align: middle;
-		}
-	</style>
-	<div id="groupsio_embed_signup">
-		<form action="https://groups.io/g/momidi/signup?u=5426540281110385330" method="post" id="groupsio-embedded-subscribe-form" name="groupsio-embedded-subscribe-form" target="_blank">
-			<div id="groupsio_embed_signup_scroll">
-				<label for="email" id="templateformtitle">Subscribe to the MoMIDI groups.io email list:</label>
-				<input type="email" value="" name="email" class="email" id="email" placeholder="Email Address" required="">
-				<!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
-				<div style="position: absolute; left: -5000px;" aria-hidden="true">
-					<input type="text" name="b_5426540281110385330" tabindex="-1" value="">
-				</div>
-				<div id="templatearchives"><p><a id="archivelink" href="https://groups.io/g/momidi/topics">View Archives</a></p></div>
-				<input type="submit" value="Subscribe" name="subscribe" id="groupsio-embedded-subscribe" class="button">
-			</div>
-		</form>
-	</div>
-</div>
-
 ## Document History
 
 * 2025-11-24, @SmittyHalibut: First draft.
