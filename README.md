@@ -4,6 +4,24 @@ Specification for sending Morse Code over MIDI events.
 
 This document builds on existing MIDI protocols used by several hardware and software manufacturers for triggering keying events between hardware keys, and software keyers, transmitters, practice oscillators, etc.  The goal is to use MIDI to trigger key-down and key-up events between morse keys, and software running on a computer (eg: an SDR transmitter, remote station, practice keyer, etc.)
 
+<div class="unstyledtemplate template" style="display: block;">
+				<div id="groupsio_unstyled_embed_signup">
+					<form action="https://groups.io/g/momidi/signup?u=5426540281110385330" method="post" id="groupsio-embedded-subscribe-form" name="groupsio-embedded-subscribe-form" target="_blank">
+						<div id="groupsio_unstyled_embed_signup_scroll">
+							<label for="email" id="unstyletemplateformtitle">Subscribe to the MoMIDI groups.io email list:</label>
+							<br>
+							<input type="email" value="" name="email" class="email" id="email" placeholder="Email Address" required="">
+							<!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+							<div style="position: absolute; left: -5000px;" aria-hidden="true">
+								<input type="text" name="b_5426540281110385330" tabindex="-1" value="">
+							</div>
+							<div id="templatearchives"><p><a id="archivelink" href="https://groups.io/g/momidi/topics">View Archives</a></p></div>
+							<input type="submit" value="Subscribe" name="subscribe" id="groupsio-embedded-subscribe" class="button">
+						</div>
+					</form>
+				</div>
+			</div>
+
 ## Document History
 
 * 2025-11-24, @SmittyHalibut: First draft.
