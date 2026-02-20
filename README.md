@@ -1,4 +1,4 @@
-# MoMIDI: Morse over MIDI
+# 1. MoMIDI: Morse over MIDI
 
 Specification for sending Morse Code over MIDI events.
 
@@ -22,112 +22,215 @@ This document builds on existing MIDI protocols used by several hardware and sof
 				</div>
 			</div>
 
-## Document History
+- [1. MoMIDI: Morse over MIDI](#1-momidi-morse-over-midi)
+	- [1.1. Document History](#11-document-history)
+	- [1.2. TODOs](#12-todos)
+	- [1.3. Terms](#13-terms)
+	- [1.4. Summary of Simple (no timing) Standard](#14-summary-of-simple-no-timing-standard)
+	- [1.5. Timing Information](#15-timing-information)
+		- [1.5.1. Timing Rules, and Special Cases](#151-timing-rules-and-special-cases)
+			- [1.5.1.1. Rule - No Time Available, or Timer Reset](#1511-rule---no-time-available-or-timer-reset)
+			- [1.5.1.2. Rule - Short Events: \<127ms](#1512-rule---short-events-127ms)
+			- [1.5.1.3. Rule - Long Events: \>127ms since last event](#1513-rule---long-events-127ms-since-last-event)
+			- [1.5.1.4. Rule - Special: 127ms](#1514-rule---special-127ms)
+			- [1.5.1.5. Rule - Special: N\*128ms](#1515-rule---special-n128ms)
+	- [1.6. Rules Tables](#16-rules-tables)
+		- [1.6.1. Table for Receiver](#161-table-for-receiver)
+		- [1.6.2. Table for Sender](#162-table-for-sender)
+	- [1.7. Concerns](#17-concerns)
+- [2. Contributers:](#2-contributers)
+
+## 1.1. Document History
 
 * 2025-11-24, @SmittyHalibut: First draft.
 * 2025-12-03, @SmittyHalibut: Updated timing from 1ms to 2ms resolution. Someone should check my math.
+* 2026-01-19, @SmittyHalibut: Going back to 1ms resolution. Added pseudocode and tables to Rules.
 
-## TODO
+## 1.2. TODOs
 
-* Draw graphical timing diagrams instead of the text based descriptions that are difficult to follow.
+* Draw a timing diagram for section 1.5
 
-## Terms
+## 1.3. Terms
 
 * Key: In the context of this document, a "key" can be any hardware device meant for sending morse code.
 * Straight Key: A key who's timing of dits and dahs is done before the conversion to MIDI.  Either a literal straight key, a bug, or even a hardware iambic keyer, etc.  The important part here is that the straight key has a single electrical contact that controls the transmitter directly.
     * Note: This could also include a hardware iambic keyer.  The output of the hardware keyer is a single contact closure, and all the timing is generated on the user side of the MIDI interface.
 * Iambic Key, or Paddles: A key who's timing of dits and dahs is done in software, on the receiving side of the MIDI events.
 * MIDI event: MIDI, or the Musical Instrument Digital Interface, is a standard for sending very precise timing events over a serial link.  It's designed around musical instruments, but we are coopting it for another time and latency sensitive use: sending morse code.
+  * MIDI Note On event: Includes two 7-bit values: Note, and Velocity
+  * MIDI Note Off event: Includes two 7-bit values: Note, and Velocity
+  * MIDI Control Change event: Includes two 7-bit values: Channel, and Value
 
-## Simple State
+## 1.4. Summary of Simple (no timing) Standard
 
 It's been pretty well established to use the following MIDI Notes to trigger CW events:
 
+* Note On events: Key down
+* Note Off events: Key up
 * Note 20: left paddle, or straight key
 * Note 21: right paddle
 * (There are a lot of other MIDI events used for various other radio control features, but we are concentrating on CW here.)
 
-A Note On event is sent to signal the key is pressed, and a Note Off event is sent to signal the key is released.
+When not sending timing information, send Note On events with a Velocity of 127, and Note Off events with a Velocity of 0.
 
-## Timing information
+## 1.5. Timing Information
 
-Sending timing information is optional.  If no timing information is being tracked, send a velocity of either 127, or 0.  Usually, 127 is sent with Note On events, and 0 with Note Off events.  Both of these values are ignored and the software receiving those events measures the time of events by when the MIDI event was received.
+Sending timing information is optional.  If no timing information is being tracked, send a Velocity of either 127, or 0.  Usually, 127 is sent with Note On events, and 0 with Note Off events.  Both of these values mean "no timing information available" and the software receiving those events measures the time of events by when the MIDI event was received.
 
-MIDI Note On/Off events also send a 7 bit value called Velocity.  In firmware, we can measure the time between key up and key down events to millisecond precision.  We can send that information to the software in the Velocity field.
+MIDI Note On/Off events send a 7-bit Note value, and a 7-bit value called Velocity.  In firmware, we can measure the time between key down and key up events to millisecond precision.  We can send that information to the software in the Velocity field.
 
-7 bits in the Velocity field is only good to measure up to 126ms (remember, 127 means "no timing information") which isn't enough in many cases.  So we can also send another MIDI event called a Control Change event, with an additional 7 bits.  14 bits is enough to count 16384ms, over 16 seconds.  Beyond that, precise timing isn't critical.
+7 bits in the Velocity field is only good to measure up to 126ms (remember, 127 means "no timing information") which isn't enough in many cases.  So we can also send a MIDI Control Change event, with an additional 7 bits when needed.  14 bits is enough to count over 16 seconds.  Beyond that, precise timing isn't critical.
 
-There's a balance to be struck between measurement precision, and the need to send two MIDI events instead of just one, which can increase latency.  
+> **Side note**: Above 30wpm (40ms per morse symbol), the MIDI latency between key-down and sound-on in a software based keyer (measured using current hardware and software as: 10ms at best, typically 15ms to 25ms) becomes significant.  We assume fast CW operators (above 30wpm) will use hardware based keyers with hardware side-tone.
 
-https://docs.google.com/spreadsheets/d/1WVlwnoBr3DEuh757tdanR0cqQTFAOU7jCl7Z6pTXOpY/
+Timing is tracked between CW MIDI events, even if they were a different event.  For example, when pressing Left, then pressing Right, then releasing Left, and releasing Right, the first time sent is 0 (see below), the second is the time between Left Down and Right Down, the third is the time between Right Down and Left Up, and the fourth is the time between Left Up and Right Up.
 
-This spreadsheet considers the percent error of events measured using 1ms, 2ms, 4ms, and 8ms resolution, for speeds between 5wpm and 30wpm.  Where 1ms precision lets us report up to 126ms with a single MIDI event.  2ms, up to 254ms.  4ms, up to 510ms.  8ms, up to 1022ms.  The worst case percent errors are: 1%, 2%, 6.3%, and 16% respectively.
+**TODO** Diagram for the above.
 
-Given these error rates, we've chosen 2ms precision as a good balance.  Above 254ms between events, the added latency of an additional MIDI event is smaller than at 1ms, but keeping fist precision good.
+### 1.5.1. Timing Rules, and Special Cases
 
-In short: The velocity in a given Note On/Off event is the number of milliseconds, divided by 2, rounding up, since the last event.  eg: If it's been 15ms since the last event, the velocity is set to (15/2 = 7.5, round up = ) 8.
+Here are the rules used to encode time since last event 0 .. 16255ms, into MIDI events and values.  The rules are presented in written word, psudo code, and in tables of values below.  It all represents the same logic, in different ways.  If you find any inconsistency, please [file a GitHub Issue](https://github.com/NetKeyer/MoMIDI-Spec/issues/new/choose) so it can be corrected.
 
-> **Side note**: Above 30wpm (40ms per morse symbol), the MIDI latency between key-down and sound-on in a software based keyer (measured using current hardware and software as: 10ms at best, typically 20ms to 40ms) becomes significant.  We assume fast CW operators (above 30wpm) will use hardware based keyers with hardware side-tone.
+MoMIDI use Control Change events with a Value of 0 to handle certain special cases that don't work with normal Long Event and Short Event logic.  They're listed as Rules with "Special" in the name.
 
-Timing is measured between CW MIDI events, even if they were a different event.  For example, when pressing Left, then pressing Right, then releasing Left, and releasing Right, the first time sent is 0 (see below), the second is the time between Left Down and Right Down, the third is the time between Right Down and Left Up, and the fourth is the time between Left Up and Right Up.
+#### 1.5.1.1. Rule - No Time Available, or Timer Reset
 
-### Timer Reset
+When it's been more than (126<<7 - 1=) 16127 milliseconds since the last event, the timer is reset to zero and not started again until another event is sent.  The next event is sent no Control Change event, and a Note Velocity of 0.
 
-When it's been more than (counter: 2^14-1=16383, 2ms events) 32766 milliseconds since the last event, the timer is reset to zero and not started again until another event is sent.  The next event is sent with a time of 0.  (See the example below.)
+#### 1.5.1.2. Rule - Short Events: \<127ms
 
-### Long Events
+When it's been **less than** 127 milliseconds since the last event, no Control Change event is sent.  A Note On/Off is sent with the Velocity set to the time since last event.  When the receiver sees a Note On/Off event without a Control Change event, it sets the 7 high order bits of the time since the last event to 0.
 
-When it's been **more than** (counter: 2^7-1=127, 2ms events) 254 milliseconds since the last event, a Control Change event is sent to the same channel number as the Note number, before the Note On/Off event.  The CC event contains the 7 high order bits.  The receiver sees a CC event before the Note On/Off event, it shifts the value of the CC up by 7 bits, then adds the Velocity from the Note event, multiplies by 2ms, and uses the result as the number of milliseconds since the previous event.
+Sender logic:
+```c
+if (Time < 127ms) {
+	Control Change = null (don't send)
+	Velocity = Time
+}
+```
 
-### Short Events
+Receiver logic:
+```c
+if (No Control Change event) {
+	Time = Velocity
+}
+```
 
-When it's been **less than** (counter: 2^7-1=127, 2ms events) 254 milliseconds since the last event, no Control Change event is sent.  The receiver sees a Note event without a CC event, it sets the 7 high order bits to 0.
+#### 1.5.1.3. Rule - Long Events: \>127ms since last event
 
-### Special Cases
+When it's been **more than** (2^7-1=) 127 milliseconds since the last event, a Control Change event is sent before the Note On/Off event, to the same Channel number as the Note.  The Control Change event Value contains the 7 high order bits of the time since last event.  When the receiver sees a Control Change event before the Note On/Off event, it shifts the Control Change Value up by 7 bits, then adds the Velocity from the Note event, and uses the result as the number of milliseconds since the previous event.
 
-When it's been **EXACTLY** (counter: 2^7-1=127, 2ms events) 254 milliseconds since the last event, we can't just send 127 in the Note because 127 means "we aren't tracking timing."  So instead, we send a Control Change event with a value of 0, and send a Note event with a Velocity of 126.  When the MIDI software processing events receives a CC of 0 followed by a Note of 126, they treat that as 127.  When the receiver receives a Note of 126 without a preceding CC, then its an actual 126.
+Sender logic:
+```c
+if (Time > 127 and Time%128 != 0) {
+	Control Change Value = int(Time/128)
+	Velocity = Time%128
+}
+```
 
-When it's been a whole number multiple of 2^7 2ms events (256ms, 512ms, etc) milliseconds since the last event, the Velocity in the Note event will be 0, but it will be preceded by a Control Change event with a non-zero value.  When the receiver receives a CC with non-zero, followed by a Note with a Velocity of zero, the receiver MUST NOT ignore the timing in the note, and MUST treat this as a Long event.
+Receiver logic:
+```c
+if (Control Change Value > 0) {
+	Time = ControlChange*128 + Velocity
+}
+```
 
-## Examples
+#### 1.5.1.4. Rule - Special: 127ms
 
-Below is a timeline showing what MIDI events are sent depending on how long it's been since the last MIDI event.
+When it's been **EXACTLY** (2^7-1=) 127 milliseconds since the last event, we can't just send a Note with a Velocity of 127, because Velocity=127 without a Control Change means "we aren't tracking timing."  So instead, we send a Control Change event with a Value of 0, then send the Note event with a Velocity of 127.
 
-Simple short key presses:
-* Time 0:  Left paddle pressed.  NoteOn Note=20, Velocity=0
-* Time 200: Left paddle released.  NoteOff Note=20, Velocity=100
-* Time 400: Right paddle pressed.  NoteOn Note=21, Velocity=100
-* Time 500: Right paddle released.  NoteOff Note=21, Velocity=50
+This can use the same logic as Long Events (Time = ControlChange*128 + Velocity), but it is different than Special: N\*128ms below.
 
-Interleaved key presses.  Note how timing is from the most recent event, even if its a different event.
-* Time 600: Left paddle pressed.  NoteOn Note=20, Velocity=50
-* Time 800: Right paddle pressed.  NoteOn Note=21, Velocity=50  (measured from the Left pressed.)
-* Time 900: Right paddle released.  NoteOff Note=21, Velocity=50
-* Time 1000: Left paddle released.  NoteOff Note=20, Velocity=50
+Sender logic:
+```c
+if (Time == 127) {
+	Control Change Value = 0
+	Velocity = 127
+}
+```
 
-Long time measurement, greater than 254ms:
-* Time 1400: Left paddle pressed.  CC Channel=20, Value=1.  NoteOn Note=20, Velocity=72
-* Time 1800: Left paddle released.  CC Channel=20, Value=1.  NoteOff Note=20, Velocity=72
+Receiver logic:
+```c
+if (Control Change Value == 0 and Velocity == 127) {
+	Time = 127
+}
+```
 
-Longer than (2^14-1)*2 milliseconds, timer resets to 0:
-* Time 40000: Left paddle pressed.  NoteOn Note=20, Velocity=0
+#### 1.5.1.5. Rule - Special: N\*128ms
 
-Exactly 254ms:
-* Time 40254: Left paddle released.  CC Channel=20, Value=0.  NoteOff Note=20, Velocity=126
+When the time since last event has been a whole number multiple of 2^7 (128ms, 256ms, 512ms, etc), the Long Event logic would set Velocity to 0.  Even though it is preceded by a Control Change event, software that is not MoMIDI aware might treat a NoteOn with Velocity of 0 as a NoteOff event.
 
-Whole number multiple of 256:
-* Time 41000: Right paddle pressed.  CC Channel=21, Value=6.  NoteOn Note=21, Velocity=105
-* Time 41512: Right paddle released.  CC Channel=21, Value=2.  NoteOff Note=21, Velocity=0
+Instead, we send the Control Change = 0 event, then set the Note Velocity to the high seven bits.  For example, if it's been 512ms since the last event and the user presses the right paddle, the receiver would get a Control Change event to channel 21 with a value of 0, followed by a Note On to note 21 with a value of (512/128=) 4.
 
-## Concerns
+Sender logic:
+```c
+if (Time%128 == 0) {
+	Control Change Value = 0
+	Velocity = int(Time/128)
+}
+```
+
+Receiver logic:
+```c
+if (Control Change Value == 0 and Velocity < 127) {
+	Time = Velocity*128
+}
+```
+
+## 1.6. Rules Tables
+
+### 1.6.1. Table for Receiver
+
+This table maps Control Change and Note events to their Time values.
+
+| **Rule** | **Control Change Value** | **Note On/Off Velocity** | **Time since last event, or other meaning** |
+| -------- | ------------------------ | ------------------------ | ------------------------------------------- |
+| No Timing | None | 0 | No timing information sent, or timer reset to 0ms. |
+| Short Event | None | 1 .. 126 | 1 .. 126ms |
+| No Timing | None | 127 | No timing information sent, or timer reset to 0ms. |
+| Special: 127ms | 0 | 127 | 127ms |
+| Special: N\*128ms | 0 | 1 | 128ms |
+| Special: N\*128ms | 0 | 2 | 256ms |
+| Special: N\*128ms | ... | ... | ... |
+| Special: N\*128ms | 0 | Vel=1 .. 126 | Vel*128ms |
+| Invalid ~~Special: N\*128ms~~ | 0 | 127 | Conflicts with 127ms above |
+| Long Event | 1 | 1 .. 127 | 129 to 255ms |
+| Long Event | 2 | 1 .. 127 | 257 to 383ms |
+| Long Event | ... | ... | ... |
+| Long Event | CC=1 .. 126 | Vel=1 .. 127 | CC*128 + Vel ms |
+| Invalid ~~Long Event~~ | 127 | 1 .. 127 | Unused >= 16127 |
+| Invalid | CC=0 .. 127 | 0 | Senders: Do not send. <br/> Receivers: Generate warning, and treat as a Long Event with Velocity=0: CC*128 + 0ms |
+
+### 1.6.2. Table for Sender
+
+This represents the same information as above, but in terms of time, rather than MIDI messages.
+
+| **Rule** | **Time since last event, or other meaning** | **Control Change Value** | **Note On/Off Velocity** |
+| -------- | ------------------------ | ------------------------ | ------------------------------------------- |
+| No timing available, or reset to 0ms | 0ms | None | 0, or 127 |
+| Short Event | 1 .. 126ms | None | 1 .. 126 |
+| Special: 127ms | 127ms | 0 | 127 |
+| Special: N\*128ms | 128ms | 0 | 1 |
+| Long Event | 129 .. 255ms | 1 | 1 .. 127 |
+| Special: N\*128ms | 256ms | 0 | 2 |
+| Long Event | 257 .. 383ms | 2 | 1 .. 127 |
+| ... | ... | ... | ... |
+| Special: N\*128ms | 16128ms | 0 | 126 |
+| Long Event | 16129 .. 16255ms | 126 | 1 .. 127 |
+| Reset timer | >= 16256ms | None | 0 |
+| Invalid | Conflicts with 127ms | 0 | 127 |
+| Invalid | Unused "Long Event" | 127 | 1 .. 127 |
+| Invalid | Avoid Velocity=0 | 0 .. 127 | 0 |
+
+## 1.7. Concerns
 
 If you have any concerns with this system, put them here.
 
-* 2025-11-24, @SmittyHalibut:  I worry about N*256ms values.  They result in a Velocity of 0, with a preceding CC event.  But software that only looks at events, and not the timing in the velocity, may see a NoteOn Velocity=0 and treat that as a Note Off.  Should we say in that case that we send a velocity of 1ms, which breaks the exact precision of our measurements, but only by 1ms which is pretty small, even at 40wpm (30ms dit length).
+* 2025-11-24, @SmittyHalibut: ADDRESSED.  ~~I worry about N*256ms values.  They result in a Velocity of 0, with a preceding CC event.  But software that only looks at events, and not the timing in the velocity, may see a NoteOn Velocity=0 and treat that as a Note Off.  Should we say in that case that we send a velocity of 1ms, which breaks the exact precision of our measurements, but only by 1ms which is pretty small, even at 40wpm (30ms dit length).~~
 
-* 2025-12-03, @SmittyHalibut: Should this be kept to morse events only: left/right paddle, and straight key?  This is where millisecond level timing is most important. But MIDI is used for SO MUCH MORE, it would be good to get that documented too.  'course, if we do that, then "Morse over MIDI" is an increasingly inappropriate name.  I'm open to thoughts on this.
+* 2025-12-03, @SmittyHalibut: Should this document be kept to morse events only: left/right paddle, and straight key?  This is where millisecond level timing is most important. But MIDI is used for SO MUCH MORE, it would be good to get that documented too.  'course, if we do that, then "Morse over MIDI" is an increasingly inappropriate name.  I'm open to thoughts on this.
 
-# Contributers:
+# 2. Contributers:
 
 * Mark Smith, Halibut Electronics
 	* Email: [mark-momidi@halibut.com](mailto:mark-momidi@halibut.com)
