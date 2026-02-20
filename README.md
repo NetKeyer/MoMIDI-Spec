@@ -131,7 +131,7 @@ if (Time > 127 and Time%128 != 0) {
 Receiver logic:
 ```c
 if (Control Change Value > 0) {
-	Time = ControlChange*128 + Velocity
+	Time = Control Change Value*128 + Velocity
 }
 ```
 
@@ -225,8 +225,6 @@ This represents the same information as above, but in terms of time, rather than
 ## 1.7. Concerns
 
 If you have any concerns with this system, put them here.
-
-* 2025-11-24, @SmittyHalibut: ADDRESSED.  ~~I worry about N*256ms values.  They result in a Velocity of 0, with a preceding CC event.  But software that only looks at events, and not the timing in the velocity, may see a NoteOn Velocity=0 and treat that as a Note Off.  Should we say in that case that we send a velocity of 1ms, which breaks the exact precision of our measurements, but only by 1ms which is pretty small, even at 40wpm (30ms dit length).~~
 
 * 2025-12-03, @SmittyHalibut: Should this document be kept to morse events only: left/right paddle, and straight key?  This is where millisecond level timing is most important. But MIDI is used for SO MUCH MORE, it would be good to get that documented too.  'course, if we do that, then "Morse over MIDI" is an increasingly inappropriate name.  I'm open to thoughts on this.
 
