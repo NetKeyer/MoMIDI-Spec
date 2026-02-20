@@ -28,16 +28,16 @@ This document builds on existing MIDI protocols used by several hardware and sof
 	- [1.3. Terms](#13-terms)
 	- [1.4. Summary of Simple (no timing) Standard](#14-summary-of-simple-no-timing-standard)
 	- [1.5. Timing Information](#15-timing-information)
-		- [1.5.1. Timing Rules, and Special Cases](#151-timing-rules-and-special-cases)
-			- [1.5.1.1. Rule - No Time Available, or Timer Reset](#1511-rule---no-time-available-or-timer-reset)
-			- [1.5.1.2. Rule - Short Events: \<127ms](#1512-rule---short-events-127ms)
-			- [1.5.1.3. Rule - Long Events: \>127ms since last event](#1513-rule---long-events-127ms-since-last-event)
-			- [1.5.1.4. Rule - Special: 127ms](#1514-rule---special-127ms)
-			- [1.5.1.5. Rule - Special: N\*128ms](#1515-rule---special-n128ms)
-	- [1.6. Rules Tables](#16-rules-tables)
-		- [1.6.1. Table for Receiver](#161-table-for-receiver)
-		- [1.6.2. Table for Sender](#162-table-for-sender)
-	- [1.7. Concerns](#17-concerns)
+	- [1.6. Timing Rules, and Special Cases](#16-timing-rules-and-special-cases)
+		- [1.6.1. No Time Available, or Timer Reset](#161-no-time-available-or-timer-reset)
+		- [1.6.2. Short Events: \<127ms](#162-short-events-127ms)
+		- [1.6.3. Long Events: \>127ms since last event](#163-long-events-127ms-since-last-event)
+		- [1.6.4. Special: 127ms](#164-special-127ms)
+		- [1.6.5. Special: N\*128ms](#165-special-n128ms)
+	- [1.7. Rules Tables](#17-rules-tables)
+		- [1.7.1. Table for Receiver](#171-table-for-receiver)
+		- [1.7.2. Table for Sender](#172-table-for-sender)
+	- [1.8. Concerns](#18-concerns)
 - [2. Contributers:](#2-contributers)
 
 ## 1.1. Document History
@@ -87,17 +87,17 @@ Timing is tracked between CW MIDI events, even if they were a different event.  
 
 **TODO** Diagram for the above.
 
-### 1.5.1. Timing Rules, and Special Cases
+## 1.6. Timing Rules, and Special Cases
 
 Here are the rules used to encode time since last event 0 .. 16255ms, into MIDI events and values.  The rules are presented in written word, psudo code, and in tables of values below.  It all represents the same logic, in different ways.  If you find any inconsistency, please [file a GitHub Issue](https://github.com/NetKeyer/MoMIDI-Spec/issues/new/choose) so it can be corrected.
 
 MoMIDI use Control Change events with a Value of 0 to handle certain special cases that don't work with normal Long Event and Short Event logic.  They're listed as Rules with "Special" in the name.
 
-#### 1.5.1.1. Rule - No Time Available, or Timer Reset
+### 1.6.1. No Time Available, or Timer Reset
 
 When it's been more than (126<<7 - 1=) 16127 milliseconds since the last event, the timer is reset to zero and not started again until another event is sent.  The next event is sent no Control Change event, and a Note Velocity of 0.
 
-#### 1.5.1.2. Rule - Short Events: \<127ms
+### 1.6.2. Short Events: \<127ms
 
 When it's been **less than** 127 milliseconds since the last event, no Control Change event is sent.  A Note On/Off is sent with the Velocity set to the time since last event.  When the receiver sees a Note On/Off event without a Control Change event, it sets the 7 high order bits of the time since the last event to 0.
 
@@ -116,7 +116,7 @@ if (No Control Change event) {
 }
 ```
 
-#### 1.5.1.3. Rule - Long Events: \>127ms since last event
+### 1.6.3. Long Events: \>127ms since last event
 
 When it's been **more than** (2^7-1=) 127 milliseconds since the last event, a Control Change event is sent before the Note On/Off event, to the same Channel number as the Note.  The Control Change event Value contains the 7 high order bits of the time since last event.  When the receiver sees a Control Change event before the Note On/Off event, it shifts the Control Change Value up by 7 bits, then adds the Velocity from the Note event, and uses the result as the number of milliseconds since the previous event.
 
@@ -135,7 +135,7 @@ if (Control Change Value > 0) {
 }
 ```
 
-#### 1.5.1.4. Rule - Special: 127ms
+### 1.6.4. Special: 127ms
 
 When it's been **EXACTLY** (2^7-1=) 127 milliseconds since the last event, we can't just send a Note with a Velocity of 127, because Velocity=127 without a Control Change means "we aren't tracking timing."  So instead, we send a Control Change event with a Value of 0, then send the Note event with a Velocity of 127.
 
@@ -156,7 +156,7 @@ if (Control Change Value == 0 and Velocity == 127) {
 }
 ```
 
-#### 1.5.1.5. Rule - Special: N\*128ms
+### 1.6.5. Special: N\*128ms
 
 When the time since last event has been a whole number multiple of 2^7 (128ms, 256ms, 512ms, etc), the Long Event logic would set Velocity to 0.  Even though it is preceded by a Control Change event, software that is not MoMIDI aware might treat a NoteOn with Velocity of 0 as a NoteOff event.
 
@@ -177,9 +177,9 @@ if (Control Change Value == 0 and Velocity < 127) {
 }
 ```
 
-## 1.6. Rules Tables
+## 1.7. Rules Tables
 
-### 1.6.1. Table for Receiver
+### 1.7.1. Table for Receiver
 
 This table maps Control Change and Note events to their Time values.
 
@@ -201,7 +201,7 @@ This table maps Control Change and Note events to their Time values.
 | Invalid ~~Long Event~~ | 127 | 1 .. 127 | Unused >= 16127 |
 | Invalid | CC=0 .. 127 | 0 | Senders: Do not send. <br/> Receivers: Generate warning, and treat as a Long Event with Velocity=0: CC*128 + 0ms |
 
-### 1.6.2. Table for Sender
+### 1.7.2. Table for Sender
 
 This represents the same information as above, but in terms of time, rather than MIDI messages.
 
@@ -222,7 +222,7 @@ This represents the same information as above, but in terms of time, rather than
 | Invalid | Unused "Long Event" | 127 | 1 .. 127 |
 | Invalid | Avoid Velocity=0 | 0 .. 127 | 0 |
 
-## 1.7. Concerns
+## 1.8. Concerns
 
 If you have any concerns with this system, put them here.
 
