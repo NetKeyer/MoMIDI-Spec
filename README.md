@@ -49,6 +49,7 @@ This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in 
 | 2025-12-03 | n/a | @SmittyHalibut | Updated timing from 1ms to 2ms resolution. Someone should check my math. |
 | 2026-01-19 | n/a | @SmittyHalibut | Going back to 1ms resolution. Added pseudocode and tables to Rules. |
 | 2026-02-20 | v0.0 | @SmittyHalibut | Changes proposed by @schrockwell: Base126.<br/>Added version numbering. |
+| 2026-02-25 | v0.0 | @SmittyHalibut | Fixing "off-by-one" confusion on CC=0 Velocity. Not bumping version. |
 
 # 1. MoMIDI Specification
 
@@ -109,6 +110,8 @@ MIDI Note On/Off events send a 7-bit Note value, and a 7-bit value called Veloci
 
 7 bits in the Velocity field is only good to measure up to 126ms (remember, 127 means "no timing information") which isn't enough in many cases.  So we also send a MIDI Control Change event, with an additional 7 bits.  14 bits is enough to count over 16 seconds.  Beyond that, precise timing isn't critical.
 
+If the time is \<= 126ms, sending the Control Change event with a value of 0 is optional.  When the receiver receives a Note-On/Off event without a preceeding Control Change event, assume the Control Change Value is 0.
+
 > **Side note**: Above 30wpm (40ms per morse symbol), the MIDI latency between key-down and sound-on in a software based keyer (measured using current hardware and software as: 10ms at best, typically 15ms to 25ms) becomes significant.  We assume fast CW operators (above 30wpm) will use hardware based keyers with hardware side-tone.
 
 ### 2.2.1. How Time Is Measured Between Events
@@ -132,22 +135,26 @@ When it's been more than [`MAX_COUNT`](#233-the-largest-number-that-can-be-repre
 
 Three MIDI events are sent, one additional before the normal two:
 
-1. MoMIDI Version Indication: Control Change to Channel 0, Value set to the version.
-1. Event Control Change to the event's Channel, with Value set to 0.
+1. MoMIDI Version Indication: Control Change to Channel 0, Value set to the MoMIDI version.
+1. **OPTIONAL**: Event Control Change to the event's Channel, with Value set to 0.
 1. Event NoteOn/Off to the event's Note, with Velocity set to 0.
 
 ### 2.3.2. Time Encoding: Base126
 
-The number of milliseconds since the last event (here called "Time") is sent in two parts, 7 bits each, the most significant bits in the Value of a Control Change event, followed by the lease significant bits in the Velocity of a Note On/Off event.
+The number of milliseconds since the last event (here called "Time") is sent in two parts, 7 bits each, the most significant bits in the Value of a Control Change event, followed by the least significant bits in the Velocity of a Note On/Off event.
 
 Remember, a Velocity of 0 and 127 mean "No timing information available" so we can't use those values.  That leaves 126 Velocity values, and all 128 Control Change Values.
 
-* Control Change Value = `floor(Time/126)`
-* Note On/Off Velocity = `Time%126 + 1`
+Since we can't use Time=0, and to minimize off-by-one confusion while debugging, we consider `Time - 1` when doing the following math.  This makes the Note On/Off Velocity equal to the actual time, when the Control Change Value is calculated to be 0.
+
+* `Control Change Value = floor(Time-1/126)`
+* `Note On/Off Velocity = (Time-1)%126 + 1`
 
 On the receiving side, you calculate the time as:
 
-* Time = `Velocity-1 + Control Change Value*126`
+* `Time = Velocity + Control Change Value*126`
+
+[A spreadsheet to validate the math can be found here](https://docs.google.com/spreadsheets/d/e/2PACX-1vQ38EwbZWGbNSEr9GhxVg4X3fGhydFB1SyfVwB9YaKn2DKvBieZ9MsJkJnr08AiFBOpsHDTO9GHzv3w/pubhtml?gid=1862224261&single=true).
 
 ### 2.3.3. The largest number that can be represented
 
