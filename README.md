@@ -141,7 +141,7 @@ Three MIDI events are sent, one additional before the normal two:
 
 ### 2.3.2. Time Encoding: Base126
 
-The number of milliseconds since the last event (here called "Time") is sent in two parts, 7 bits each, the most significant bits in the Value of a Control Change event, followed by the least significant bits in the Velocity of a Note On/Off event.
+The number of milliseconds since the last event (here called "Time") is sent in two parts, 7 bits each, the most significant bits in the Value of a Control Change event, followed by the least significant bits in the Velocity of a Note On/Off event.  When the Control Change Value is calculated as 0, sending the Control Change event is optional.  When receiving a Note On/Off event without a Control Change event (to the same channel as the note), assume the value is 0.
 
 Remember, a Velocity of 0 and 127 mean "No timing information available" so we can't use those values.  That leaves 126 Velocity values, and all 128 Control Change Values.
 
