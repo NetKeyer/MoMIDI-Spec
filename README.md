@@ -50,6 +50,7 @@ This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in 
 | 2026-01-19 | n/a | @SmittyHalibut | Going back to 1ms resolution. Added pseudocode and tables to Rules. |
 | 2026-02-20 | v0.0 | @SmittyHalibut | Changes proposed by @schrockwell: Base126.<br/>Added version numbering. |
 | 2026-02-25 | v0.0 | @SmittyHalibut | Fixing "off-by-one" confusion on CC=0 Velocity. Not bumping version. |
+| 2026-03-20 | v0.0 | @SmittyHalibut | Fixed order of operations in `velocity` calculation. |
 
 # 1. MoMIDI Specification
 
@@ -147,7 +148,7 @@ Remember, a Velocity of 0 and 127 mean "No timing information available" so we c
 
 Since we can't use Time=0, and to minimize off-by-one confusion while debugging, we consider `Time - 1` when doing the following math.  This makes the Note On/Off Velocity equal to the actual time, when the Control Change Value is calculated to be 0.
 
-* `Control Change Value = floor(Time-1/126)`
+* `Control Change Value = floor((Time-1)/126)`
 * `Note On/Off Velocity = (Time-1)%126 + 1`
 
 On the receiving side, you calculate the time as:
