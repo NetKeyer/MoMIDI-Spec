@@ -148,6 +148,8 @@ Remember, a Velocity of 0 and 127 mean "No timing information available" so we c
 
 Since we can't use Time=0, and to minimize off-by-one confusion while debugging, we consider `Time - 1` when doing the following math.  This makes the Note On/Off Velocity equal to the actual time, when the Control Change Value is calculated to be 0.
 
+The following pseudo-code works for values `1 <= Time <= MAX_VALUE`.  Notably, they do NOT work for `Time == 0`.  So make sure you handle a zero time explicitly.
+
 * `Control Change Value = floor((Time-1)/126)`
 * `Note On/Off Velocity = (Time-1)%126 + 1`
 
