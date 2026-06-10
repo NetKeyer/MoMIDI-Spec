@@ -161,7 +161,7 @@ On the receiving side, you calculate the time as:
 
 ### 2.3.3. The largest number that can be represented
 
-The maximum value that can be represented, `MAX_COUNT = 127*126 + 126 = 16128`.  This represents the number of idle milliseconds when the timing gets reset.
+The maximum value that can be represented, `MAX_COUNT = 128*126 = 16128`.  This represents the number of idle milliseconds when the timing gets reset.
 
 ## 2.4. Concerns
 
