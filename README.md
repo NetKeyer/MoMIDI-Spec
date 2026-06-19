@@ -4,7 +4,9 @@ Specification for sending Morse Code over MIDI events.
 
 This document builds on existing MIDI protocols used by several hardware and software manufacturers for triggering keying events between hardware keys, and software keyers, transmitters, practice oscillators, etc.  The goal is to use MIDI to trigger key-down and key-up events between morse keys, and software running on a computer (eg: an SDR transmitter, remote station, practice keyer, etc.)
 
-This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in progress
+This document represents [MoMIDI version](#12-momidi-versions) **v0.1 PROPOSED**
+
+A Quick Reference for the MIDI Protocol: <https://www.songstuff.com/recording/article/midi-message-format/>
 
 <div class="unstyledtemplate template" style="display: block;">
 	<div id="groupsio_unstyled_embed_signup">
@@ -39,7 +41,9 @@ This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in 
 		- [2.3.2. Time Encoding: Base126](#232-time-encoding-base126)
 		- [2.3.3. The largest number that can be represented](#233-the-largest-number-that-can-be-represented)
 	- [2.4. Concerns](#24-concerns)
-- [3. Contributers:](#3-contributers)
+- [3. System Exclusive (SysEx) Manufacturer IDs](#3-system-exclusive-sysex-manufacturer-ids)
+	- [3.1. MoMIDI Manufacturer ID table](#31-momidi-manufacturer-id-table)
+- [4. Contributers:](#4-contributers)
 
 <h2>Document History </h2>
 
@@ -51,6 +55,7 @@ This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in 
 | 2026-02-20 | v0.0 | @SmittyHalibut | Changes proposed by @schrockwell: Base126.<br/>Added version numbering. |
 | 2026-02-25 | v0.0 | @SmittyHalibut | Fixing "off-by-one" confusion on CC=0 Velocity. Not bumping version. |
 | 2026-03-20 | v0.0 | @SmittyHalibut | Fixed order of operations in `velocity` calculation. |
+| 2026-06-18 | v0.1 | @SmittyHalibut | Issue #1:<br/>Timing MSB to Polyphonic Aftertouch, sent after Note On/Off.<br/>MoMIDI Version to Song Select.<br/>Start tracking Manufacturer IDs for SysEx messages.  |
 
 # 1. MoMIDI Specification
 
@@ -58,7 +63,7 @@ This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in 
 
 * **Key**: In the context of this document, a "key" can be any hardware device meant for sending morse code.
 * **Straight Key**: A key who's timing of dits and dahs is done before the conversion to MIDI.  Either a literal straight key, a bug, or even a hardware iambic keyer, etc.  The important part here is that the straight key has a single electrical contact that controls the transmitter directly.
-    * Note: This could also include a hardware iambic keyer.  The output of the hardware keyer is a single contact closure, and all the timing is generated on the user side of the MIDI interface.
+  * Note: This could also include a hardware iambic keyer.  The output of the hardware keyer is a single contact closure, and all the timing is generated on the user side of the MIDI interface.
 * **Iambic Key**, or **Paddles**: A key who's timing of dits and dahs is done in software, on the receiving side of the MIDI events.
 * **MIDI event**: MIDI, or the Musical Instrument Digital Interface, is a standard for sending very precise timing events over a serial link.  It's designed around musical instruments, but we are coopting it for another time and latency sensitive use: sending morse code.
   * MIDI Note On event: Includes two 7-bit values: Note, and Velocity
@@ -70,7 +75,7 @@ This document represents [MoMIDI version](#12-momidi-versions) **v0.0** Work in 
 
 ## 1.2. MoMIDI Versions
 
-The MoMIDI version indicates what features the receiver can expect from the receiver.  It is sent as the Value in a Control Change event, so it's limited to 7 bits.
+The MoMIDI version indicates what features the receiver can expect from the sender.  It is sent as the Value in a Song Select (MIDI Status 0xF3) event, so it's limited to 7 bits.
 
 Those 7 bits are split into Major (3 MSB) and Minor (4 LSB) version numbers:
 
@@ -85,33 +90,40 @@ When writing the version in a technical context, it may also be written as a hex
 
 | Version | Release Date | Description/More Information |
 | ------- | ------------ | ---------------------------- |
-| no version CC | 2025-11-24 | Initial development. Changed a whole lot. |
+| no version | 2025-11-24 | Initial development. Changed a whole lot. |
 | 0x00 | 2026-02-20 | First indicated version, still under development. |
+| 0x01 **PROPOSED** | 2026-06-18 | Timing MSB to Polyphonic Aftertouch, sent after Note On/Off.<br/>MoMIDI Version to Song Select.<br/>Start tracking Manufacturer IDs for SysEx messages. |
 | 0x10 | TBD | Initial release. |
 
 # 2. MoMIDI Protocol
 
-## 2.1. MoMIDI Without Timing
+Convention: bare numbers are decimal. Hexidecimal are prefixed with `0x`.  eg: `20` is decimal, `0x14` is its hexidecimal equivalent.
 
-It's been pretty well established to use the following MIDI Notes to trigger CW events:
+MIDI Note On/Off events send a 7-bit Note value, and a 7-bit value called Velocity. It's been pretty well established to use these MIDI Notes to trigger CW events:
 
-* Note On events: Key down
-* Note Off events: Key up
+* Note On events (MIDI Status 0x8n): key down
+* Note Off events (MIDI Status 0x9n): key up
 * Note 20: left paddle, or straight key
 * Note 21: right paddle
+* Note 30: straight key
+* Note 31: PTT
 * (There are a lot of other MIDI events used for various other radio control features, but we are concentrating on CW here.)
 
-When not sending timing information, send Note On events with a Velocity of 127, and Note Off events with a Velocity of 0.
+## 2.1. MoMIDI Without Timing
+
+Sending timing information is optional.  If no timing information is being tracked, send Notes with a Velocity of either 127, or 0.  Usually, 127 is sent with Note On events, and 0 with Note Off events.  Both of these values mean "no timing information available" and the software receiving those events measures the time of events by when the MIDI event was received.  Do not send or expect any additional MIDI events.
 
 ## 2.2. Timing Information
 
-Sending timing information is optional.  If no timing information is being tracked, send a Velocity of either 127, or 0.  Usually, 127 is sent with Note On events, and 0 with Note Off events.  Both of these values mean "no timing information available" and the software receiving those events measures the time of events by when the MIDI event was received.  Do not send any Control Change events.
+To send timing information, measure in firmware the time between key down/up events to millisecond precision.  Then send that information to the software in the Velocity field of the Note On/Off event.
 
-MIDI Note On/Off events send a 7-bit Note value, and a 7-bit value called Velocity.  In firmware, we can measure the time between key down and key up events to millisecond precision.  We can send that information to the software in the Velocity field.
+7 bits in the Note On/Off Velocity field is only good to measure up to 126ms (remember, 127 means "no timing information") which isn't enough in many cases.  So we also send a Polyphonic Aftertouch event, immediately after the Note On/Off, to the same note, with 7 additional (most significant) bits sent in the Pressure value.  14 bits is enough to count over 16 seconds.  Beyond that, precise timing isn't critical.
 
-7 bits in the Velocity field is only good to measure up to 126ms (remember, 127 means "no timing information") which isn't enough in many cases.  So we also send a MIDI Control Change event, with an additional 7 bits.  14 bits is enough to count over 16 seconds.  Beyond that, precise timing isn't critical.
+Calculating the values sent in the Note On/Off Velocity and Aftertouch Pressure are defined below.
 
-If the time is \<= 126ms, sending the Control Change event with a value of 0 is optional.  When the receiver receives a Note-On/Off event without a preceeding Control Change event, assume the Control Change Value is 0.
+Sending a Polyphonic Aftertouch event is not optional (as the Control Code was in previous MoMIDI versions).  When the time is \<= 126ms, send the Polyphonic Aftertouch event with a Pressure value of 0.
+
+If possible, send the Note On/Off and the Aftertouch events in the same packet, to minimize latency on the receiver side.
 
 > **Side note**: Above 30wpm (40ms per morse symbol), the MIDI latency between key-down and sound-on in a software based keyer (measured using current hardware and software as: 10ms at best, typically 15ms to 25ms) becomes significant.  We assume fast CW operators (above 30wpm) will use hardware based keyers with hardware side-tone.
 
@@ -121,10 +133,10 @@ Timing is tracked between all CW MIDI events, even if they were a different even
 
 | Wall clock time | Event | MIDI Sent | Time sent with event |
 | --------------- | ----- | --------- | -------------------- |
-| 01:23:45.678 | Left Down | NoteOn 20 | 0, start of timing. |
-| 01:23:45.778 | Right Down | NoteOn 21 | 100ms |
-| 01:23:45.808 | Left Up | NoteOff 20 | 30ms |
-| 01:23:45.958 | Right Up | NoteOff 21 | 150ms |
+| 01:23:45.678 | Left Down | Note On 20 | 0, start of timing. |
+| 01:23:45.778 | Right Down | Note On 21 | 100ms |
+| 01:23:45.808 | Left Up | Note Off 20 | 30ms |
+| 01:23:45.958 | Right Up | Note Off 21 | 150ms |
 
 ## 2.3. Representing Time in MIDI
 
@@ -136,28 +148,33 @@ When it's been more than [`MAX_COUNT`](#233-the-largest-number-that-can-be-repre
 
 Three MIDI events are sent, one additional before the normal two:
 
-1. MoMIDI Version Indication: Control Change to Channel 0, Value set to the MoMIDI version.
-1. **OPTIONAL**: Event Control Change to the event's Channel, with Value set to 0.
-1. Event NoteOn/Off to the event's Note, with Velocity set to 0.
+1. MoMIDI Version Indication: Song Select (MIDI Status 0xF3), with the value set to the MoMIDI version.
+2. Event Note On (MIDI Status 0x80) or Off (MIDI Status 0x90) to the event's Note, with Velocity set to 0.
+3. Polyphonic Aftertouch (MIDI Status 0xA0) to the event's Note, with Pressure set to 0.
 
 ### 2.3.2. Time Encoding: Base126
 
-The number of milliseconds since the last event (here called "Time") is sent in two parts, 7 bits each, the most significant bits in the Value of a Control Change event, followed by the least significant bits in the Velocity of a Note On/Off event.  When the Control Change Value is calculated as 0, sending the Control Change event is optional.  When receiving a Note On/Off event without a Control Change event (to the same channel as the note), assume the value is 0.
+The number of milliseconds since the last event (here called "Time") is sent in two parts, 7 bits each: the least significant bits in the Velocity of a Note On/Off event, followed by the most significant bits in the Pressure of the Polyphonic Aftertouch event.
 
-Remember, a Velocity of 0 and 127 mean "No timing information available" so we can't use those values.  That leaves 126 Velocity values, and all 128 Control Change Values.
+Remember, a Note On/Off Velocity of 0 and 127 mean "No timing information available" so we can't use those values.  That leaves 126 Velocity values, and all 128 Aftertouch Pressures.
 
-Since we can't use Time=0, and to minimize off-by-one confusion while debugging, we consider `Time - 1` when doing the following math.  This makes the Note On/Off Velocity equal to the actual time, when the Control Change Value is calculated to be 0.
+Since we can't use Time=0, and to minimize off-by-one confusion while debugging, we consider `Time - 1` when doing the following math.  This makes the Note On/Off Velocity equal to the actual time, when the Aftertouch Pressure is calculated to be 0.
 
 The following pseudo-code works for values `1 <= Time <= MAX_VALUE`.  Notably, they do NOT work for `Time == 0`.  So make sure you handle a zero time explicitly.
 
-* `Control Change Value = floor((Time-1)/126)`
 * `Note On/Off Velocity = (Time-1)%126 + 1`
+* `Polyphonic Aftertouch Pressure = floor((Time-1)/126)`
 
 On the receiving side, you calculate the time as:
 
-* `Time = Velocity + Control Change Value*126`
+* `Time = Velocity + Pressure*126`
 
 [A spreadsheet to validate the math can be found here](https://docs.google.com/spreadsheets/d/e/2PACX-1vQ38EwbZWGbNSEr9GhxVg4X3fGhydFB1SyfVwB9YaKn2DKvBieZ9MsJkJnr08AiFBOpsHDTO9GHzv3w/pubhtml?gid=1862224261&single=true).
+
+Two MIDI events are sent:
+
+1. Event Note On (MIDI Status 0x80) of Orr (MIDI Status 0x90) to the event's Note, with the Velocity set as above.
+2. Polyphonic Aftertouch (MIDI Status 0xA0) to the event's Note, with Pressure set as above.
 
 ### 2.3.3. The largest number that can be represented
 
@@ -169,7 +186,27 @@ If you have any concerns with this system, put them here.
 
 * 2025-12-03, @SmittyHalibut: Should this document be kept to morse events only: left/right paddle, and straight key?  This is where millisecond level timing is most important. But MIDI is used for SO MUCH MORE, it would be good to get that documented too.  'course, if we do that, then "Morse over MIDI" is an increasingly inappropriate name.  I'm open to thoughts on this.
 
-# 3. Contributers:
+# 3. System Exclusive (SysEx) Manufacturer IDs
+
+MIDI has the concept of a System Exclusive, or SysEx, message.  It represents data that is unique to a particular manufacturer's equipment, and is not meant to be "standardized" across multiple manufacturers.  It is often used for things such as firmware updates, audio patch downloads, etc.  Can be large data, is unique to a specific device or manufacturer.
+
+As such, SysEx messages include a globally recognized "Manufacturer ID" that identifies what type of hardware a given device is.  MIDI maintains their own list of manufacturers, which are out-of-scope for MoMIDI.  To let MoMIDI manufacturers use SysEx messages to communicate with their hardware, MoMIDI tracks its own list of manufacturers.
+
+MoMIDI manufacturers are responsible for specifying their own protocol for data inside the SysEx stream, since it is by its nature unique to your their product.  But it is recommended that the SysEx header begin with a Product ID so that a single Manufacturer ID can be used with multiple products.  The scope of that Product ID is limited to a given Manufacturer ID.
+
+## 3.1. MoMIDI Manufacturer ID table
+
+At some future date, this make be split out to its own document.  For now, we will embed it in the MoMIDI Spec.
+
+| Mfg ID | Manufacturer / Purpose |
+| ------ | ---------------------- |
+| 0x00 | No manufacturer assigned.  Use this before your Manufacturer ID is assigned. |
+| 0x01 | [Lynovations](https://lynovation.com/) |
+| 0x02 | [Halibut Electronics](https://electronics.halibut.com/) |
+
+Contact the [MoMIDI groups.io list](https://groups.io/g/momidi) to request to be assigned a Manufacturer ID.
+
+# 4. Contributers:
 
 * Mark Smith, Halibut Electronics
   * Email: [mark-momidi@halibut.com](mailto:mark-momidi@halibut.com)
