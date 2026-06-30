@@ -255,6 +255,6 @@ If you have any concerns with this system, put them here.
 * Dale Farnsworth
   * GitHub: [@DaleFarnsworth](https://github.com/DaleFarnsworth)
   * QRZ: [W7DA](https://www.qrz.com/db/W7DA)
-* Jon Perkins
+* Jonathan Perkins
   * GitHub: [@g4ivv](https://github.com/g4ivv)
   * QRZ: [G4IVV](https://www.qrz.com/db/G4IVV)
