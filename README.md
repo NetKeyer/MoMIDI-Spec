@@ -4,51 +4,51 @@ Specification for sending Morse Code over MIDI events.
 
 This document builds on existing MIDI protocols used by several hardware and software manufacturers for triggering keying events between hardware keys, and software keyers, transmitters, practice oscillators, etc.  The goal is to use MIDI to trigger key-down and key-up events between morse keys, and software running on a computer (eg: an SDR transmitter, remote station, practice keyer, etc.)
 
-This document represents [MoMIDI version](#12-momidi-versions) **v0.1**
+This document represents [MoMIDI version](#13-momidi-versions) **v0.1**
 
 A Quick Reference for the MIDI Protocol: <https://www.songstuff.com/recording/article/midi-message-format/>
 
 <div class="unstyledtemplate template" style="display: block;">
-	<div id="groupsio_unstyled_embed_signup">
-		<form action="https://groups.io/g/momidi/signup?u=5426540281110385330" method="post" id="groupsio-embedded-subscribe-form" name="groupsio-embedded-subscribe-form" target="_blank">
-			<div id="groupsio_unstyled_embed_signup_scroll">
-				<label for="email" id="unstyletemplateformtitle">Subscribe to the MoMIDI groups.io email list:</label>
-				<br>
-				<input type="email" value="" name="email" class="email" id="email" placeholder="Email Address" required="">
-				<!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
-				<div style="position: absolute; left: -5000px;" aria-hidden="true">
-					<input type="text" name="b_5426540281110385330" tabindex="-1" value="">
-				</div>
-				<div id="templatearchives"><p><a id="archivelink" href="https://groups.io/g/momidi/topics">View Archives</a></p></div>
-				<input type="submit" value="Subscribe" name="subscribe" id="groupsio-embedded-subscribe" class="button">
-			</div>
-		</form>
-	</div>
+    <div id="groupsio_unstyled_embed_signup">
+        <form action="https://groups.io/g/momidi/signup?u=5426540281110385330" method="post" id="groupsio-embedded-subscribe-form" name="groupsio-embedded-subscribe-form" target="_blank">
+            <div id="groupsio_unstyled_embed_signup_scroll">
+                <label for="email" id="unstyletemplateformtitle">Subscribe to the MoMIDI groups.io email list:</label>
+                <br>
+                <input type="email" value="" name="email" class="email" id="email" placeholder="Email Address" required="">
+                <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+                <div style="position: absolute; left: -5000px;" aria-hidden="true">
+                    <input type="text" name="b_5426540281110385330" tabindex="-1" value="">
+                </div>
+                <div id="templatearchives"><p><a id="archivelink" href="https://groups.io/g/momidi/topics">View Archives</a></p></div>
+                <input type="submit" value="Subscribe" name="subscribe" id="groupsio-embedded-subscribe" class="button">
+            </div>
+        </form>
+    </div>
 </div>
 
 <h2>Table of Contents</h2>
 
-- [1. MoMIDI Specification](#1-momidi-specification)
-	- [1.1. Terms](#11-terms)
-	- [1.2. Numeric Conventions](#12-numeric-conventions)
-	- [1.3. MoMIDI Versions](#13-momidi-versions)
-		- [1.3.1. List of Versions](#131-list-of-versions)
-- [2. MoMIDI Protocol](#2-momidi-protocol)
-	- [2.1. Note Values](#21-note-values)
-	- [2.2. MoMIDI Without Timing](#22-momidi-without-timing)
-	- [2.3. Timing Information](#23-timing-information)
-		- [2.3.1. How Time Is Measured Between Events](#231-how-time-is-measured-between-events)
-		- [2.3.2. Representing Time in MIDI](#232-representing-time-in-midi)
-			- [2.3.2.1. No Time Available, or Timer Reset](#2321-no-time-available-or-timer-reset)
-			- [2.3.2.2. Time Encoding: Base126](#2322-time-encoding-base126)
-			- [2.3.2.3. The largest number that can be represented](#2323-the-largest-number-that-can-be-represented)
-	- [2.4. MoMIDI Version Query](#24-momidi-version-query)
-		- [2.4.1. What to do with the Version](#241-what-to-do-with-the-version)
-		- [2.4.2. Ignorant Participants (who don't know MoMIDI versions)](#242-ignorant-participants-who-dont-know-momidi-versions)
-- [3. System Exclusive (SysEx) Manufacturer IDs](#3-system-exclusive-sysex-manufacturer-ids)
-	- [3.1. MoMIDI Manufacturer ID table](#31-momidi-manufacturer-id-table)
-- [4. Concerns](#4-concerns)
-- [5. Contributors:](#5-contributors)
+* [1. MoMIDI Specification](#1-momidi-specification)
+  * [1.1. Terms](#11-terms)
+  * [1.2. Numeric Conventions](#12-numeric-conventions)
+  * [1.3. MoMIDI Versions](#13-momidi-versions)
+    * [1.3.1. List of Versions](#131-list-of-versions)
+* [2. MoMIDI Protocol](#2-momidi-protocol)
+  * [2.1. Note Values](#21-note-values)
+  * [2.2. MoMIDI Without Timing](#22-momidi-without-timing)
+  * [2.3. Timing Information](#23-timing-information)
+    * [2.3.1. How Time Is Measured Between Events](#231-how-time-is-measured-between-events)
+    * [2.3.2. Representing Time in MIDI](#232-representing-time-in-midi)
+      * [2.3.2.1. No Time Available, or Timer Reset](#2321-no-time-available-or-timer-reset)
+      * [2.3.2.2. Time Encoding: Base126](#2322-time-encoding-base126)
+      * [2.3.2.3. The largest number that can be represented](#2323-the-largest-number-that-can-be-represented)
+  * [2.4. MoMIDI Version Query](#24-momidi-version-query)
+    * [2.4.1. What to do with the Version](#241-what-to-do-with-the-version)
+    * [2.4.2. Ignorant Participants (who don't know MoMIDI versions)](#242-ignorant-participants-who-dont-know-momidi-versions)
+* [3. System Exclusive (SysEx) Manufacturer IDs](#3-system-exclusive-sysex-manufacturer-ids)
+  * [3.1. MoMIDI Manufacturer ID table](#31-momidi-manufacturer-id-table)
+* [4. Concerns](#4-concerns)
+* [5. Contributors](#5-contributors)
 
 <h2>Document History </h2>
 
@@ -76,7 +76,7 @@ A Quick Reference for the MIDI Protocol: <https://www.songstuff.com/recording/ar
   * MIDI Control Change event: Includes two 7-bit values: Channel, and Value.
   * MIDI Song Select event: Includes only one 7-bit value: Song Number.
   * MIDI System Exclusive (SysEx) Start/End events: Includes a 7-bit Manufacturer ID value, and an arbitrary number of 7-bit Data values.
-* **Timing Round**: The state machine that tracks timing information.  It starts with a time value of zero, and ends after there's been more than [`MAX_COUNT`](#233-the-largest-number-that-can-be-represented) milliseconds since the last tracked event, after which the next event sent will be sent with a value of zero and start a new Timing Round.
+* **Timing Round**: The state machine that tracks timing information.  It starts with a time value of zero, and ends after there's been more than [`MAX_COUNT`](#2323-the-largest-number-that-can-be-represented) milliseconds since the last tracked event, after which the next event sent will be sent with a value of zero and start a new Timing Round.
 * **Sender**: the device sending the MoMIDI packets.
 * **Receiver**: the software on the computer receiving and interpreting the MoMIDI packets.
 
@@ -158,7 +158,7 @@ Here are the rules used to encode time since last event: 1 .. 16128ms, into MIDI
 
 #### 2.3.2.1. No Time Available, or Timer Reset
 
-When it's been more than [`MAX_COUNT`](#2223-the-largest-number-that-can-be-represented) milliseconds since the last event, the next event is treated as if no timing information is available.  
+When it's been more than [`MAX_COUNT`](#2323-the-largest-number-that-can-be-represented) milliseconds since the last event, the next event is treated as if no timing information is available.
 
 The Sender sends two MIDI events, one of which is optional:
 
@@ -240,7 +240,7 @@ If you have any concerns with this system, put them here.
 
 * 2025-12-03, @SmittyHalibut: Should this document be kept to morse events only: left/right paddle, and straight key?  This is where millisecond level timing is most important. But MIDI is used for SO MUCH MORE, it would be good to get that documented too.  'course, if we do that, then "Morse over MIDI" is an increasingly inappropriate name.  I'm open to thoughts on this.
 
-# 5. Contributors:
+# 5. Contributors
 
 * Lynn Hansen, Lynovations
   * QRZ: [KU7Q](https://www.qrz.com/db/KU7Q)
