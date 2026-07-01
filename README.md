@@ -4,7 +4,7 @@ Specification for sending Morse Code over MIDI events.
 
 This document builds on existing MIDI protocols used by several hardware and software manufacturers for triggering keying events between hardware keys, and software keyers, transmitters, practice oscillators, etc.  The goal is to use MIDI to trigger key-down and key-up events between morse keys, and software running on a computer (eg: an SDR transmitter, remote station, practice keyer, etc.)
 
-This document represents [MoMIDI version](#12-momidi-versions) **v0.1 PROPOSED**
+This document represents [MoMIDI version](#12-momidi-versions) **v0.1**
 
 A Quick Reference for the MIDI Protocol: <https://www.songstuff.com/recording/article/midi-message-format/>
 
@@ -102,8 +102,8 @@ When writing the version in a technical context, it may also be written as a hex
 | Version | Release Date | Description/More Information |
 | ------- | ------------ | ---------------------------- |
 | no version | 2025-11-24 | Initial development. Changed a whole lot. |
-| 0x00 | 2026-02-20 | First indicated version, still under development. |
-| 0x01 **PROPOSED** | 2026-06-18 | Timing MSB to Polyphonic Aftertouch.  MoMIDI Version to Song Select.  Start tracking Manufacturer IDs for SysEx messages. |
+| 0x00 | 2026-07-01 | MoMIDI Version Query flag. Requests that the receiver respond with its MoMIDI version. |
+| 0x01 | 2026-07-01 | Timing MSB to Polyphonic Aftertouch.  MoMIDI Version to Song Select.  Start tracking Manufacturer IDs for SysEx messages. |
 
 # 2. MoMIDI Protocol
 
