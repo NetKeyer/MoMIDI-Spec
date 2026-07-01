@@ -43,8 +43,8 @@ A Quick Reference for the MIDI Protocol: <https://www.songstuff.com/recording/ar
 			- [2.3.2.2. Time Encoding: Base126](#2322-time-encoding-base126)
 			- [2.3.2.3. The largest number that can be represented](#2323-the-largest-number-that-can-be-represented)
 	- [2.4. MoMIDI Version Query](#24-momidi-version-query)
-		- [2.4.1. Ignorant Participants (who don't know MoMIDI versions)](#241-ignorant-participants-who-dont-know-momidi-versions)
-		- [2.4.2. Loops](#242-loops)
+		- [2.4.1. What to do with the Version](#241-what-to-do-with-the-version)
+		- [2.4.2. Ignorant Participants (who don't know MoMIDI versions)](#242-ignorant-participants-who-dont-know-momidi-versions)
 - [3. System Exclusive (SysEx) Manufacturer IDs](#3-system-exclusive-sysex-manufacturer-ids)
 	- [3.1. MoMIDI Manufacturer ID table](#31-momidi-manufacturer-id-table)
 - [4. Concerns](#4-concerns)
@@ -158,12 +158,14 @@ Here are the rules used to encode time since last event: 1 .. 16128ms, into MIDI
 
 #### 2.3.2.1. No Time Available, or Timer Reset
 
-When it's been more than [`MAX_COUNT`](#2223-the-largest-number-that-can-be-represented) milliseconds since the last event, the timer is reset to zero and not started again until another event is sent.  
+When it's been more than [`MAX_COUNT`](#2223-the-largest-number-that-can-be-represented) milliseconds since the last event, the next event is treated as if no timing information is available.  
 
 The Sender sends two MIDI events, one of which is optional:
 
 1. **OPTIONAL**: Polyphonic Aftertouch (MIDI Status 0xA0) to the event's Note, with Pressure set to 0.
 2. Note On (MIDI Status 0x90) or Off (MIDI Status 0x80) to the event's Note, with Velocity set to 127 (Note On) or 0 (Note Off).
+
+The Receiver considers this event to be "zero milliseconds" as referenced by future events that do send timing information, until another "no timing information available" event is received.
 
 #### 2.3.2.2. Time Encoding: Base126
 
@@ -195,19 +197,21 @@ The maximum value that can be represented is: `MAX_COUNT = 128*126 = 16128`.  Th
 
 ## 2.4. MoMIDI Version Query
 
-Either participant, Sender or Receiver, may offer their version, and request the other to indicate what [version of the MoMIDI protocol](#13-momidi-versions) they are using.  This part of the protocol is symmetric; either side may initiate the exchange and the other may respond.  For writing clarity, we use the terms Requester and Responder here instead of Sender and Receiver.
+Either participant, Sender or Receiver, may request that the other indicate what [version of the MoMIDI protocol](#13-momidi-versions) they are using.  This part of the protocol is symmetric; either side may initiate the exchange and the other may respond.  For writing clarity, we use the terms Requester and Responder here instead of Sender and Receiver.
 
-The Requester sends a Song Select event (MIDI Status 0xF3) with the 7-bit Song Number set to [the MoMIDI version](#131-list-of-versions) that the Requester supports.  When the Responder receives the Song Select event, it should respond with a Song Select event, with the Song Number set to the MoMIDI version that the Responder supports.
+The Requester sends a Song Select event (MIDI Status 0xF3) with the 7-bit Song Number set to 0.  When the Responder receives the Song Select event with a Song Number of 0, it should respond with a Song Select event, with the Song Number set to the MoMIDI version that the Responder supports.
 
-### 2.4.1. Ignorant Participants (who don't know MoMIDI versions)
+Either side may also offer its version unsolicited by just sending a Song Select event with the Song Number set to its MoMIDI version.  There is no acknowledgement required or expected.
 
-The Requester should not *require* a response.  The Responder(sic) may not respond, and that should not lock-up or confuse the Requester.  In this case, the Requester may assume whatever the developer wants.  However, it is suggested that the Requester be conservative with what it expects, and flexible with what it receives.
+### 2.4.1. What to do with the Version
 
-However, Responders who receive a Song Select event should respond if they are able to.
+What each party does with this version is up to the developer.  It is not required to "negotiate a highest common version" or anything.  But if there is backwards-compatibility breaking changes made in the protocol, this version number will let the software select the correct interpretation.
 
-### 2.4.2. Loops
+### 2.4.2. Ignorant Participants (who don't know MoMIDI versions)
 
-To prevent infinite loops, when sending a Song Select event, either as a request or response, both parties must set a 1 second timer (or longer at the developers discretion) that prevents any more Song Select events being sent.  No more than one Song Select event per second, request or response, should ever be sent.
+The Requester should not *require* a response.  The Responder(sic) may not respond, and that should not lock-up or confuse the Requester.  In this case, the Requester may assume whatever the developer wants.  It is suggested that the Requester be conservative with what it expects, and flexible with what it receives.
+
+However, Responders who receive a Song Select event and know about MoMIDI versions, should respond if they are able to.
 
 # 3. System Exclusive (SysEx) Manufacturer IDs
 
