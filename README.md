@@ -160,7 +160,7 @@ Here are the rules used to encode time since last event: 1 .. 16128ms, into MIDI
 
 When it's been more than [`MAX_COUNT`](#2223-the-largest-number-that-can-be-represented) milliseconds since the last event, the timer is reset to zero and not started again until another event is sent.  
 
-The Sender sens two MIDI events, one of which is optional:
+The Sender sends two MIDI events, one of which is optional:
 
 1. **OPTIONAL**: Polyphonic Aftertouch (MIDI Status 0xA0) to the event's Note, with Pressure set to 0.
 2. Note On (MIDI Status 0x90) or Off (MIDI Status 0x80) to the event's Note, with Velocity set to 127 (Note On) or 0 (Note Off).
